@@ -1,0 +1,85 @@
+---
+title: "Rinorsa's Portofolio"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+These are my latest simple data analysis on three different subjects. The first two graphs were made as the submission of TidyTuesday, a weekly RStudio data visualization project on Twitter. 
+
+## The Office's IMDb Rating
+
+The first one is IMDb Rating of The Office tv show. At a glance, we can show that the rating and total vote for the latest season is relatively lower than the previous (except for the finale).
+
+```{r echo=FALSE, message=FALSE}
+library(tidyverse)
+
+office_ratings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-17/office_ratings.csv')
+
+# Preparing-------------------------------------------------------------------------
+
+highest_rating <- office_ratings %>% 
+  group_by(season) %>% 
+  filter(imdb_rating == max(imdb_rating)) %>% 
+  top_n(total_votes, n = 1)
+
+lowest_rating <- office_ratings %>% 
+  group_by(season) %>% 
+  filter(imdb_rating == min(imdb_rating)) %>% 
+  filter(total_votes == min(total_votes))
+
+# Graphing------------------------------------------------------------------------- 
+
+office_ratings %>% 
+  ggplot(aes(factor(season), imdb_rating, col = factor(season))) +
+  geom_point(aes(size = total_votes), position = position_jitter(width = 0.04), alpha = 0.65) +
+  labs(title = "The Office's IMDb Rating", subtitle = "Which Episode Got the Highest and Lowest?", x = "Season", y = "Rating", size = "Total Votes") +
+  guides(col = FALSE) +
+  geom_text(data = highest_rating, aes(label = title), size = 3, nudge_y = 0.095) +
+  geom_text(data = lowest_rating, aes(label = title), size = 3, nudge_y = -0.095) +
+  scale_color_brewer(palette = "Paired")
+```
+
+## USA Beer Production
+
+The second one is a simpler graphic that shows production growth of beer over the year in the USA.
+
+```{r echo=FALSE, message=FALSE}
+library(gganimate)
+library(ggthemes)
+
+beer_states <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/beer_states.csv')
+
+p <- beer_states %>% 
+  filter(state == "total") %>% 
+  group_by(type) %>%
+  mutate(growth = (barrels - lag(barrels)) / lag(barrels)) %>% 
+  filter(year > 2008) %>% 
+  ggplot(aes(as.integer(year), growth, color = type)) +
+  geom_line() +
+  geom_point(aes(group = seq_along(year))) +
+  geom_text(aes(label = scales::percent(growth, 0.1)),
+            size = 3.5, nudge_y = 0.03) +
+  scale_x_continuous(limit = c(2008,2020), 
+                     expand = c(0,0),
+                     breaks = c(2009:2019)) +
+  scale_y_continuous(labels = scales::percent, 
+                     limit = c(-0.25,0.97), 
+                     expand = c(0,0)) +
+  scale_color_brewer(palette = "Dark2",
+                     breaks = c("On Premises", "Bottles and Cans", "Kegs and Barrels")) +
+  labs(title = "Growth of Total Barrels Produced in the USA", x = "Year", y = "Growth", color = "Type") +
+  theme_economist() +
+  transition_reveal(year)
+
+animate(p, renderer = gifski_renderer("barrel.gif"))
+```
+
+## Indonesia RASKIN Program (rice for the poor): a PCA Analysis
+
+The last one is the more complex version where I use a Principal Component Analysis Technique to get a sense of the distribution of RASKIN program. Detailed analysis can bee seen in https://github.com/derinorsaa/RASKIN/blob/master/PCA.md. Wealthier characteristics are to the left and poorer characteristics are to the right (second image). Households that have ever received RASKIN tend to be on the right side of the x-axis. RASKIN is indeed distributed to poor households, but it is far from perfect.
+
+My analysis gives a limited suggestion that while the selection process of RASKIN needs to be improved (some wealthier households also enjoy RASKIN), the fact that some poorer households never received RASKIN means that the information of this program also has to be promoted more widely and more inclusive.
+
